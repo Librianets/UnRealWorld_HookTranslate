@@ -1,0 +1,5 @@
+LIBRARY URWTraceHook
+EXPORTS
+    InitializeTrace=_InitializeTrace@4
+    RunTraceSelfTest=_RunTraceSelfTest@4
+    RunTranslationHookSelfTest=_RunTranslationHookSelfTest@4

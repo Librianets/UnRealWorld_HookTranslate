@@ -1,0 +1,11 @@
+Licensing scope
+
+The project's own C++ and Python code, build scripts and authored documentation
+are available under the Zero-Clause BSD license (0BSD), see LICENSE.
+There is no attribution or source-disclosure requirement for that code.
+
+Third-party components retain their own licenses. MinHook and its bundled
+Hacker Disassembler Engine notices must accompany source and binary releases.
+Game text and translation data, fonts, and game resources are outside any
+blanket license for the project's code. UnReal World belongs to its
+respective rights holders. No original game executable is included.

@@ -1,0 +1,30 @@
+# Native build products
+.build/
+.vs/
+.translation_test/
+*.exe
+*.dll
+*.obj
+*.pdb
+*.ilk
+*.lib
+*.exp
+*.exe.manifest
+*.dll.manifest
+*.log
+# Local game, generated text and session data
+game/
+logs/
+**/generated/
+**/*SELFTEST*.json
+**/__pycache__/
+*.py[cod]
+*.tmp
+URWTrace.ini
+!config/URWTrace.ini
+!UnRealWorld/URWTrace.ini
+# Files for GitHub Releases belong outside Git history
+runtime/
+dist/
+release_assets/
+local_settings.json

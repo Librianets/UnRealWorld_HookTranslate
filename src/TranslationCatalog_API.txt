@@ -1,0 +1,98 @@
+TranslationCatalog, runtime 0.04
+
+Independent C++17 module; no third-party libraries or changes to the game executable.
+
+Integration:
+  urwtranslation::TranslationCatalog catalog;
+  catalog.Initialize(hookDirectory);  // Reads translate/catalog.json; NOT in DllMain.
+  catalog.Reload(false);             // At most one filesystem stat per second.
+  catalog.Translate(utf8, callerPreferredVA, targetPreferredVA, result, ruleId);
+  catalog.GetCodePage();             // 1251 / 866 / 65001; UTF-8 input and result always.
+
+Optional SetProgressCallback(callback,user) reports load stages (stat/read/parse/
+lexicon/index/published) and index progress every 1000 entries. It is disabled by
+default. The callback runs under the catalogue mutex and MUST NOT call back into
+the same catalogue. Clear the callback after diagnosis to avoid hot-path logging.
+
+Runtime must copy the result into a separate render buffer and convert UTF-8 to the
+font's encoding itself. The module never alters logical English strings. Output byte
+length after conversion and the renderer's capacity must be checked by the runtime.
+
+Reload(true) bypasses throttling. A new catalogue is validated completely before
+publishing an immutable snapshot. Invalid JSON, broken placeholders, wrong schema,
+unsupported encoding and invalid Unicode preserve the previous usable snapshot.
+Reload returns false on failure; LastError() explains it. Translate keeps working
+with the previous snapshot even after a failed reload. A changed size or modification
+timestamp triggers reading; untouched files are only stat-ed once per second.
+
+Matching is case-sensitive and whitespace-sensitive. An exact rule wins over any
+template. Among rules of the same kind, caller/target-specific scope takes priority.
+Templates then prefer more fixed literal text, followed by typed numeric captures.
+This prevents a generic {arg1} field from shadowing a specific numeric item template.
+Conflicting equally-specific translations return false, keeping English. Identical
+translations may share aliases. A disabled or dynamic entry is never applied.
+
+Templates use {name} and signed numeric {n}. {{ and }} mean literal braces. Named
+placeholders repeated in the source must capture the same value. Every translated
+form must preserve the source set of names; repeats may differ. Adjacent placeholders
+are rejected. Limits: 4096 input bytes, 65536 output bytes, 64 tokens / 16 names per
+template, 2048 matching states. Ambiguous/exhausted matching returns English.
+
+Russian numeric forms: one = 1 except 11; few = 2..4 except 12..14; many = remaining
+integers; other = fractional values. The sign is ignored for the form. Using only
+the last two decimal digits avoids overflow even for INT64_MIN or longer counts.
+
+Optional root lexicon is an array of {source,translation,forms:{one,few,many,other,
+genitive}}. Captured values are looked up only as whole strings. Unknown or conflicting
+aliases stay English; no substring translation, fuzzy matching or recursive rewriting
+is performed. A template may specify variables:{item:{kind:"lexicon",number:"n"}}
+to select one/few/many/other forms by a captured count. Missing forms use translation.
+Without variables metadata, the lexeme's plain translation is used.
+
+Encyclopedia entries use kind:"document" and are stored separately. GetDocuments()
+returns owned copies of all documents, including disabled ones, from one immutable
+snapshot. DocumentEntry fields: id,file,topic,headerHex,source,translation (UTF-8
+strings, except headerHex is ASCII hexadecimal) and bool enabled. JSON field name
+is header_hex. The renderer chooses translation when enabled and original source
+otherwise. This module only stores the documents; it never builds or writes GAME.NFO.
+
+Only file:"GAME.NFO" is accepted. Topic must be nonempty UTF-8. header_hex must be
+nonempty hexadecimal of even length, at most 400 characters (200 original bytes).
+Both source and translation may be empty and are limited to 65536 UTF-8 bytes each;
+embedded NUL bytes are rejected. Document bodies are never indexed by Translate().
+All document validation failures preserve the previous entire catalogue snapshot.
+
+test_translation_catalog.cmd builds/runs the x86 native tests. The tests create and
+remove their own unique temporary directory, never write production catalogues and
+include real reviewed CSV text at ascii:001A7498. Optional executable command-line
+argument is a hook root to validate an existing catalogue read-only.
+
+Hook0.14 presentation context: Translate accepts optional readonly source evidence
+vector<NpcSourceIdentity>. Branch player_name supplies the current native Source
+(max12 bytes) only for live dialogue/4F3990 presentation. Parameters explicitly
+annotated source_identity=current_player_name must equal that value. Opaque names
+remain unchanged; this is neither a dictionary priority nor permission to read
+current state while replaying historical journal entries. Context participates
+in cache identity. Name/description/invalid evidence retains its NPC-only role.
+
+Hook0.18 locale extension: encoding=cp1252 and language=fi are supported.
+Finnish numeric forms select one only for absolute whole1, otherwise other;
+Russian defaults remain unchanged. variables may use kind=number for a named
+numeric parameter. UTF8 catalogue text is encoded only by the display hook.
+Shared URWTrace.ini/runtime names replace the old rus-prefixed bootstrap/DLL.
+
+Hook0.19 Finnish data:
+- Compact units may provide source_aliases: an array of proven alternate native
+  display inputs for the same editable exact card. The immutable primary source
+  and source grammar remain unchanged. Targets are not duplicated for aliases.
+- Finnish lexemes may provide arbitrary explicit named case forms. The runtime
+  does not infer Finnish noun stems from English or reuse Russian case cycles.
+- A legacy template variable with kind=lexicon may request form="partitive"
+  (or another explicit form). Missing forms reject that fallback. Optional
+  literal_values suppress presentation-only articles without changing captures.
+- InspectDomain is read-only offline research. The hook never invokes it as
+  an additional unscoped translation route. CatalogProbe accepts @domain:alias:form
+  and @exact as optional fourth TSV fields for controlled replay.
+- Finnish adjective/culture agreement follows the requested head case/number.
+  Display transforms preserve the source English operations; Finnish casing and
+  conjunctions are target policies. Russian behaviour is retained.

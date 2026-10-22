@@ -1,11 +1,11 @@
 # UnReal World Translation Hook
 
 Source for the common translation bootstrap `URWTrace.exe` and x86
-presentation hook `URWTraceHook.dll`, version 0.20, for the original English
-UnReal World 3.89 executable. Russian and Finnish share this runtime.
+presentation hook `URWTraceHook.dll`, version 0.21, for the original English
+UnReal World 3.89.1 executable. Russian and Finnish share this runtime.
 
 Required game SHA256:
-`e0b15bbbe16ffcd95d4ab61f08fe95dea4b95ebe1b3de428dae1d9477a9710d9`.
+`c6ed73642c1b1cb1f86b818c7586224398c2f0554f6114ced31bc40ff071806d`.
 Hook 0.19 targets3.88; do not mix those versions.
 
 ## Build and test
@@ -36,9 +36,9 @@ file, SHA256 and detection name.
 ## Version addresses
 
 There are 188 hook profiles and 1118 verified direct call sites. Catalogue
-function IDs retain3.88 identities; `VersionAddresses.h` maps them to3.89
+function IDs retain3.88 identities; `VersionAddresses.h` maps them to3.89.1
 addresses. These IDs must not be applied directly to another game version.
-`docs/addresses_3.89.json` records the mapping. A newer game needs a new audit.
+`docs/addresses_3.89.1.json` records the mapping. A newer game needs a new audit.
 
 ## Licensing
 
@@ -47,3 +47,5 @@ Copy `THIRD_PARTY_LICENSES.txt` with distributed binaries, including Lite.
 See `LICENSE_SCOPE.txt` for the project code. Original game EXEs, decompiler
 dumps and user session logs are not part of this repository.
 See [Russian instructions](README_RU.md).
+
+Hook0.20 remains available for game3.89; Hook0.19 targets3.88.

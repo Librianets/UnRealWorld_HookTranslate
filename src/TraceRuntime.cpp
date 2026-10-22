@@ -1179,7 +1179,7 @@ static bool OpenLog(DWORD consolePid,bool testing) {
     g_logLimit=(uint64_t)std::max(1U,std::min(512U,GetPrivateProfileIntW(L"Hook",L"LogSegmentMiB",64,g_ini.c_str())))*1024*1024;
     if(!testing&&g_consoleMode) {
         if(!GetConsoleWindow()&&!AttachConsole(consolePid))AllocConsole();
-        SetConsoleOutputCP(CP_UTF8);SetConsoleTitleW(L"UnReal World 3.88 - translation hook 0.20");
+        SetConsoleOutputCP(CP_UTF8);SetConsoleTitleW(L"UnReal World 3.89.1 - translation hook 0.21");
         g_console=CreateFileW(L"CONOUT$",GENERIC_WRITE,FILE_SHARE_WRITE|FILE_SHARE_READ,nullptr,OPEN_EXISTING,0,nullptr);
     }
     if(g_loggingEnabled) {
@@ -1190,8 +1190,8 @@ static bool OpenLog(DWORD consolePid,bool testing) {
     if(!Rotate())return false;
     }
     g_tls=TlsAlloc();if(g_tls==TLS_OUT_OF_INDEXES)return false;
-    Emit("START",",\"version\":\"0.20\",\"schema\":1,\"testing\":"+std::string(testing?"true":"false")+",\"exe_sha256\":"+Quote(testing?"selftest":kExpectedSha)+",\"module_base\":"+Quote(Hex(g_base))+",\"translation_scope_functions\":111,\"console_mode\":"+std::to_string(g_consoleMode)+",\"logging_enabled\":"+(g_loggingEnabled?"true":"false")+",\"console_attached\":"+(GetConsoleWindow()?"true":"false"),
-         "[READY] Translation hook 0.20; external catalogue. Logs: "+Utf8(g_folder),true);
+    Emit("START",",\"version\":\"0.21\",\"schema\":1,\"testing\":"+std::string(testing?"true":"false")+",\"exe_sha256\":"+Quote(testing?"selftest":kExpectedSha)+",\"module_base\":"+Quote(Hex(g_base))+",\"translation_scope_functions\":111,\"console_mode\":"+std::to_string(g_consoleMode)+",\"logging_enabled\":"+(g_loggingEnabled?"true":"false")+",\"console_attached\":"+(GetConsoleWindow()?"true":"false"),
+         "[READY] Translation hook 0.21; external catalogue. Logs: "+Utf8(g_folder),true);
     return true;
 }
 static bool Install(const std::vector<TraceOverride>* testTargets) {

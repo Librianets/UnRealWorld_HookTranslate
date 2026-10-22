@@ -46,7 +46,7 @@ static void Print(const wchar_t* format,...) {
     SetLastError(error);
 }
 
-static const char* kExpected = "e0b15bbbe16ffcd95d4ab61f08fe95dea4b95ebe1b3de428dae1d9477a9710d9";
+static const char* kExpected = "c6ed73642c1b1cb1f86b818c7586224398c2f0554f6114ced31bc40ff071806d";
 static std::wstring LastMessage(DWORD code=GetLastError()) {
     wchar_t* text=nullptr;FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS,nullptr,code,0,(wchar_t*)&text,0,nullptr);
     std::wstring result=L"Win32 "+std::to_wstring(code)+L": "+(text?text:L"Unknown error");if(text)LocalFree(text);
@@ -144,8 +144,8 @@ static int Launch() {
     GetPrivateProfileStringW(L"Hook",L"GameExe",L"game\\urw.exe",setting,32768,ini.c_str());
     std::wstring game=setting;if(game.find(L':')==std::wstring::npos&&game.rfind(L"\\\\",0)!=0)game=root+L"\\"+game;
     std::wstring dll=root+L"\\URWTraceHook.dll";
-    Print(L"URW translation hook 0.20\nGame: %s\nChecking clean 3.89 SHA256...\n",game.c_str());
-    if(Sha256File(game)!=kExpected){Print(L"ERROR: expected the clean English urw.exe 3.89. No game started.\n");return 2;}
+    Print(L"URW translation hook 0.21\nGame: %s\nChecking clean 3.89.1 SHA256...\n",game.c_str());
+    if(Sha256File(game)!=kExpected){Print(L"ERROR: expected the clean English urw.exe 3.89.1. No game started.\n");return 2;}
     std::ifstream stream(game,std::ios::binary);std::vector<char> image((std::istreambuf_iterator<char>(stream)),{});
     if(image.size()<4096)return 2;
     auto* dos=(IMAGE_DOS_HEADER*)image.data();auto* nt=(IMAGE_NT_HEADERS32*)(image.data()+dos->e_lfanew);DWORD entryRva=nt->OptionalHeader.AddressOfEntryPoint;
@@ -179,7 +179,7 @@ static int Launch() {
 static int BootstrapSelfTest() {
     const unsigned attempts=24;unsigned passed=0;
     std::wstring root=Directory(ModulePath()),game=root+L"\\game\\urw.exe";
-    if(Sha256File(game)!=kExpected){Print(L"ERROR: bootstrap test requires clean 3.89.\n");return 2;}
+    if(Sha256File(game)!=kExpected){Print(L"ERROR: bootstrap test requires clean 3.89.1.\n");return 2;}
     std::ifstream stream(game,std::ios::binary);std::vector<char> image((std::istreambuf_iterator<char>(stream)),{});
     auto* dos=(IMAGE_DOS_HEADER*)image.data();auto* nt=(IMAGE_NT_HEADERS32*)(image.data()+dos->e_lfanew);
     for(unsigned i=0;i<attempts;++i) {
@@ -214,7 +214,7 @@ static int BootstrapSelfTest() {
     }
     Print(L"UNICODE_CHECK: Русский текст ошибок\n");
     std::ofstream report(root+L"\\BOOTSTRAP_TEST.json",std::ios::binary);
-    report<<"{\"version\":\"0.20\",\"launcher_sha256\":\""<<Sha256File(ModulePath())<<"\",\"attempts\":"<<attempts<<",\"passed\":"<<passed<<",\"failed\":"<<(attempts-passed)<<"}\n";
+    report<<"{\"version\":\"0.21\",\"launcher_sha256\":\""<<Sha256File(ModulePath())<<"\",\"attempts\":"<<attempts<<",\"passed\":"<<passed<<",\"failed\":"<<(attempts-passed)<<"}\n";
     return passed==attempts?0:1;
 }
 int wmain(int argc,wchar_t** argv) {

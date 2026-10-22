@@ -38,4 +38,4 @@ cl /nologo /std:c++17 /utf-8 /O2 /MT /EHsc /W4 /Fo.build\catalog_tests\ /Fe:Tran
 if errorlevel 1 exit /b 1
 cl /nologo /std:c++17 /utf-8 /O2 /MT /EHsc /W4 /Fo.build\catalog_tests\ /Fe:CompactCatalogTest.exe src\CompactCatalogTest.cpp src\TranslationCatalog.cpp
 if errorlevel 1 exit /b 1
-echo Built translation hook 0.20 and self-tests. GUI is in UnRealWorld_Launcher.
+echo Built translation hook 0.21 and self-tests. GUI is in UnRealWorld_Launcher.

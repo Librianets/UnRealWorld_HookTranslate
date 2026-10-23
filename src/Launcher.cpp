@@ -1,4 +1,6 @@
 #include "Shared.h"
+#include "SteamInstall.h"
+#include <memory>
 #include <tlhelp32.h>
 #include <cstdio>
 #include <cwchar>
@@ -139,13 +141,30 @@ static bool RemoteCall(HANDLE process,void* procedure,const void* input,SIZE_T s
 }
 static BOOL WINAPI ConsoleControl(DWORD type){return type==CTRL_C_EVENT||type==CTRL_BREAK_EVENT;}
 static DWORD g_outputCodePage=1251;
+static std::wstring g_language=L"ru",g_gameArguments;
+static bool g_steamEntry=false;
 static int Launch() {
     std::wstring root=Directory(ModulePath()),ini=root+L"\\URWTrace.ini";wchar_t setting[32768];
     GetPrivateProfileStringW(L"Hook",L"GameExe",L"game\\urw.exe",setting,32768,ini.c_str());
     std::wstring game=setting;if(game.find(L':')==std::wstring::npos&&game.rfind(L"\\\\",0)!=0)game=root+L"\\"+game;
+    std::unique_ptr<SteamInstall::Lock> lock;
+    if(SteamInstall::Managed(root)) {
+        if(!g_steamEntry){Print(L"ERROR: Steam mode is enabled. Launch urw.exe from Steam; use URW_Launcher to change language or restore.\n");return 2;}
+        lock.reset(new SteamInstall::Lock(root));
+        if(!lock->okay()){Print(L"ERROR: game or Steam setup is already active.\n");return 2;}
+        auto state=SteamInstall::Read(root);
+        if(!state.valid||!SteamInstall::Own(state,Sha256File(ModulePath()))){Print(L"ERROR: invalid Steam installation. Repair it with URW_Launcher.\n");return 2;}
+        game=root+L"\\urw-original.exe";
+    }else if(g_steamEntry){Print(L"ERROR: Steam installation record is missing. Use URW_Launcher.\n");return 2;}
     std::wstring dll=root+L"\\URWTraceHook.dll";
-    Print(L"URW translation hook 0.21\nGame: %s\nChecking clean 3.89.1 SHA256...\n",game.c_str());
+    Print(L"URW translation hook 0.22\nGame: %s\nChecking clean 3.89.1 SHA256...\n",game.c_str());
     if(Sha256File(game)!=kExpected){Print(L"ERROR: expected the clean English urw.exe 3.89.1. No game started.\n");return 2;}
+    if(g_language==L"en") {
+        STARTUPINFOW si={};si.cb=sizeof(si);PROCESS_INFORMATION pi={};
+        std::wstring cmd=L"\""+game+L"\""+g_gameArguments;
+        if(!CreateProcessW(game.c_str(),&cmd[0],nullptr,nullptr,FALSE,0,nullptr,Directory(game).c_str(),&si,&pi)){Print(L"ERROR: cannot start English game.\n");return 4;}
+        CloseHandle(pi.hThread);WaitForSingleObject(pi.hProcess,INFINITE);DWORD code=0;GetExitCodeProcess(pi.hProcess,&code);CloseHandle(pi.hProcess);return (int)code;
+    }
     std::ifstream stream(game,std::ios::binary);std::vector<char> image((std::istreambuf_iterator<char>(stream)),{});
     if(image.size()<4096)return 2;
     auto* dos=(IMAGE_DOS_HEADER*)image.data();auto* nt=(IMAGE_NT_HEADERS32*)(image.data()+dos->e_lfanew);DWORD entryRva=nt->OptionalHeader.AddressOfEntryPoint;
@@ -153,7 +172,7 @@ static int Launch() {
     if(!local){Print(L"ERROR: cannot inspect URWTraceHook.dll: %s\n",LastMessage().c_str());return 3;}
     FARPROC init=GetProcAddress(local,"InitializeTrace");DWORD initOffset=init?(DWORD)init-(DWORD)local:0;FreeLibrary(local);
     if(!initOffset){Print(L"ERROR: missing InitializeTrace export.\n");return 3;}
-    STARTUPINFOW startup={};startup.cb=sizeof(startup);PROCESS_INFORMATION pi={};std::wstring command=L"\""+game+L"\"";
+    STARTUPINFOW startup={};startup.cb=sizeof(startup);PROCESS_INFORMATION pi={};std::wstring command=L"\""+game+L"\""+g_gameArguments;
     auto environment=GameEnvironment();
     if(!CreateProcessW(game.c_str(),&command[0],nullptr,nullptr,FALSE,DEBUG_ONLY_THIS_PROCESS|CREATE_UNICODE_ENVIRONMENT,environment.data(),Directory(game).c_str(),&startup,&pi)){
         Print(L"ERROR: cannot start game: %s\n",LastMessage().c_str());return 4;
@@ -225,9 +244,18 @@ int wmain(int argc,wchar_t** argv) {
     std::wstring selected=language;selected=selected.substr(0,selected.find_first_of(L";#"));
     size_t first=selected.find_first_not_of(L" \t\r\n"),last=selected.find_last_not_of(L" \t\r\n");
     selected=first==std::wstring::npos?L"":selected.substr(first,last-first+1);wcsncpy_s(language,selected.c_str(),_TRUNCATE);
-    if(argc==3&&wcscmp(argv[1],L"--language")==0)wcsncpy_s(language,argv[2],_TRUNCATE);
+    std::wstring basename=ModulePath();basename=basename.substr(basename.find_last_of(L"\\/")+1);
+    g_steamEntry=_wcsicmp(basename.c_str(),L"urw.exe")==0;
+    // Steam passes game arguments to the replacement entry, not hook options.
+    auto quote=[](const wchar_t* arg){std::wstring out=L" \"";size_t slashes=0;
+        for(const wchar_t* p=arg;*p;++p){if(*p==L'\\'){++slashes;continue;}
+            if(*p==L'"'){out.append(slashes*2+1,L'\\');out+=L'"';}else{out.append(slashes,L'\\');out+=*p;}slashes=0;}
+        out.append(slashes*2,L'\\');return out+L"\"";};
+    if(g_steamEntry){for(int i=1;i<argc;++i)g_gameArguments+=quote(argv[i]);}
+    else if(argc==3&&wcscmp(argv[1],L"--language")==0)wcsncpy_s(language,argv[2],_TRUNCATE);
     else if(argc!=1){MessageBoxW(nullptr,L"Usage: URWTrace.exe [--language ru|fi]",L"URWTrace",MB_OK|MB_ICONERROR);return 2;}
-    if(wcscmp(language,L"ru")&&wcscmp(language,L"fi")){MessageBoxW(nullptr,L"Language must be ru or fi in URWTrace.ini.",L"URWTrace",MB_OK|MB_ICONERROR);return 2;}
+    if(wcscmp(language,L"ru")&&wcscmp(language,L"fi")&&wcscmp(language,L"en")){MessageBoxW(nullptr,L"Language must be en, ru or fi in URWTrace.ini.",L"URWTrace",MB_OK|MB_ICONERROR);return 2;}
+    g_language=language;
     g_outputCodePage=wcscmp(language,L"fi")==0?1252:1251;
     bool console=GetPrivateProfileIntW(L"Hook",L"ConsoleMode",0,ini.c_str())!=0;
     if(console){if(!GetConsoleWindow())AllocConsole();SetConsoleOutputCP(CP_UTF8);SetConsoleCtrlHandler(ConsoleControl,TRUE);}

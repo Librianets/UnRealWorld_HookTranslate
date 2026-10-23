@@ -1,7 +1,7 @@
 # UnReal World Translation Hook
 
 Source for the common translation bootstrap `URWTrace.exe` and x86
-presentation hook `URWTraceHook.dll`, version 0.21, for the original English
+presentation hook `URWTraceHook.dll`, version 0.22, for the original English
 UnReal World 3.89.1 executable. Russian and Finnish share this runtime.
 
 Required game SHA256:
@@ -49,3 +49,17 @@ dumps and user session logs are not part of this repository.
 See [Russian instructions](README_RU.md).
 
 Hook0.20 remains available for game3.89; Hook0.19 targets3.88.
+
+## Steam entry installation in0.22
+
+`SteamInstall.h` is shared with the GUI. In Steam mode the master loader is
+copied to `urw.exe` and launches the preserved `urw-original.exe`. English
+runs directly without the hook. The bootstrap inherits the Steam environment,
+forwards arguments and waits for its child. Direct bootstrap launches are
+refused while Steam mode is installed; use the game's Steam entry instead.
+`test_steam_022.cmd` exercises supported updates, rollback, interrupted writes,
+backup collisions and exclusive operation locks using temporary fixtures.
+The shipped DLL and language data are byte-identical to0.21; only the GUI and
+bootstrap changed. The DLL diagnostic version therefore remains0.21.
+Real EN/RU/FI renamed-game startup and normal close were tested. Steam client
+integration (overlay/playtime/Cloud) remains subject to player testing.
